@@ -11,7 +11,7 @@ ext {
     url = 'https://github.com/PTOM76/CurseGradle'
 }
 
-version = '1.5.0'
+version = '1.5.0-SNAPSHOT'
 group = 'com.matthewprenger'
 description = 'Gradle plugin to upload artifacts to CurseForge'
 base.archivesName = 'CurseGradle'
