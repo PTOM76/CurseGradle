@@ -5,7 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.plugins.JavaPluginExtension
 
 class Integration {
 
@@ -16,7 +16,7 @@ class Integration {
             if (project.plugins.hasPlugin('java')) {
                 log.info 'Java plugin detected, adding integration...'
                 if (curseProject.mainArtifact == null) {
-                    Task jarTask = project.tasks.getByName('jar')
+                    Task jarTask = project.tasks.named('jar').get()
                     log.info "Setting main artifact for CurseForge Project $curseProject.id to the java jar"
                     CurseArtifact artifact = new CurseArtifact()
                     artifact.artifact = jarTask
@@ -32,8 +32,8 @@ class Integration {
     static void checkJavaVersion(Project project, CurseProject curseProject) {
 
         try {
-            JavaPluginConvention javaConv = (JavaPluginConvention) project.getConvention().getPlugins().get("java")
-            JavaVersion javaVersion = JavaVersion.toVersion(javaConv.targetCompatibility)
+            JavaPluginExtension javaExt = project.extensions.getByType(JavaPluginExtension)
+            JavaVersion javaVersion = javaExt.targetCompatibility
 
             if (JavaVersion.VERSION_1_6.compareTo(javaVersion) >= 0) {
                 curseProject.addGameVersion('Java 6')
