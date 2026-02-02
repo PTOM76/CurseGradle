@@ -38,7 +38,7 @@ class Util {
             return (File) obj
         }
         if (obj instanceof AbstractArchiveTask) {
-            return ((AbstractArchiveTask) obj).getArchivePath()
+            return ((AbstractArchiveTask) obj).getArchiveFile().get().asFile
         }
         return project.file(obj)
     }

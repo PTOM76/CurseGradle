@@ -8,7 +8,7 @@ plugins {
 
 ext {
     inceptionYear = '2015'
-    url = 'https://github.com/matthewprenger/CurseGradle'
+    url = 'https://github.com/PTOM76/CurseGradle'
 }
 
 version = '1.5.0'
@@ -84,7 +84,7 @@ assemble.dependsOn javadocJar, sourcesJar
 
 gradlePlugin {
     website = project.url
-    vcsUrl = 'https://github.com/matthewprenger/CurseGradle'
+    vcsUrl = 'https://github.com/PTOM76/CurseGradle'
     plugins {
         curseGradlePlugin {
             id = 'com.matthewprenger.cursegradle'
