@@ -1,15 +1,14 @@
 package com.matthewprenger.cursegradle
 
 import com.google.common.base.Charsets
-import com.google.common.io.Files
 import com.google.gson.Gson
 import com.matthewprenger.cursegradle.jsonresponse.CurseError
-import org.apache.http.HttpResponse
-import org.apache.http.client.HttpClient
-import org.apache.http.client.config.CookieSpecs
-import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.hc.client5.http.classic.HttpClient
+import org.apache.hc.client5.http.classic.methods.HttpGet
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.cookie.StandardCookieSpec
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -84,28 +83,28 @@ class Util {
 
         HttpClient client = HttpClientBuilder.create()
                 .setDefaultRequestConfig(RequestConfig.custom()
-                .setCookieSpec(CookieSpecs.IGNORE_COOKIES).build()).build()
+                .setCookieSpec(StandardCookieSpec.IGNORE).build()).build()
 
         HttpGet get = new HttpGet(new URI(url))
         get.setHeader('X-Api-Token', apiKey)
 
-        HttpResponse response = client.execute(get)
+        return client.execute(get, { CloseableHttpResponse response ->
+            int statusCode = response.code
 
-        int statusCode = response.statusLine.statusCode
-
-        if (statusCode == 200) {
-            byte[] data = response.entity.content.bytes
-            return new String(data, Charsets.UTF_8)
-        } else {
-            if (response.getFirstHeader('content-type').value.contains('json')) {
-                InputStreamReader reader = new InputStreamReader(response.entity.content)
-                CurseError error = gson.fromJson(reader, CurseError)
-                reader.close()
-                throw new RuntimeException("[CurseForge] Error Code ${error.errorCode}: ${error.errorMessage}")
+            if (statusCode == 200) {
+                byte[] data = response.entity.content.bytes
+                return new String(data, Charsets.UTF_8)
             } else {
-                throw new RuntimeException("[CurseForge] HTTP Error Code $response.statusLine.statusCode: $response.statusLine.reasonPhrase")
+                if (response.getFirstHeader('content-type').value.contains('json')) {
+                    InputStreamReader reader = new InputStreamReader(response.entity.content)
+                    CurseError error = gson.fromJson(reader, CurseError)
+                    reader.close()
+                    throw new RuntimeException("[CurseForge] Error Code ${error.errorCode}: ${error.errorMessage}")
+                } else {
+                    throw new RuntimeException("[CurseForge] HTTP Error Code ${response.code}: ${response.reasonPhrase}")
+                }
             }
-        }
+        })
     }
 
     /**

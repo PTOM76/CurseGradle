@@ -3,14 +3,14 @@ package com.matthewprenger.cursegradle
 import com.google.common.base.Strings
 import com.matthewprenger.cursegradle.jsonresponse.CurseError
 import com.matthewprenger.cursegradle.jsonresponse.UploadResponse
-import org.apache.http.HttpResponse
-import org.apache.http.client.HttpClient
-import org.apache.http.client.config.CookieSpecs
-import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.ContentType
-import org.apache.http.entity.mime.MultipartEntityBuilder
-import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.hc.client5.http.classic.HttpClient
+import org.apache.hc.client5.http.classic.methods.HttpPost
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.cookie.StandardCookieSpec
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
+import org.apache.hc.core5.http.ContentType
 import org.gradle.api.DefaultTask
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -63,7 +63,7 @@ class CurseUploadTask extends DefaultTask {
 
         HttpClient client = HttpClientBuilder.create()
                 .setDefaultRequestConfig(RequestConfig.custom()
-                .setCookieSpec(CookieSpecs.IGNORE_COOKIES).build()).build()
+                .setCookieSpec(StandardCookieSpec.IGNORE).build()).build()
 
         HttpPost post = new HttpPost(new URI(uploadUrl))
 
@@ -78,23 +78,24 @@ class CurseUploadTask extends DefaultTask {
             return 0
         }
 
-        HttpResponse response = client.execute(post)
-
-        if (response.statusLine.statusCode == 200) {
-            InputStreamReader reader = new InputStreamReader(response.entity.content)
-            UploadResponse curseResponse = Util.gson.fromJson(reader, UploadResponse)
-            reader.close()
-            fileID = curseResponse.id
-        } else {
-            if (response.getFirstHeader('content-type').value.contains('json')) {
+        client.execute(post, { CloseableHttpResponse response ->
+            if (response.code == 200) {
                 InputStreamReader reader = new InputStreamReader(response.entity.content)
-                CurseError error = Util.gson.fromJson(reader, CurseError)
+                UploadResponse curseResponse = Util.gson.fromJson(reader, UploadResponse)
                 reader.close()
-                throw new RuntimeException("[CurseForge ${projectId}] Error Code ${error.errorCode}: ${error.errorMessage}")
+                fileID = curseResponse.id
             } else {
-                throw new RuntimeException("[CurseForge ${projectId}] HTTP Error Code $response.statusLine.statusCode: $response.statusLine.reasonPhrase")
+                if (response.getFirstHeader('content-type').value.contains('json')) {
+                    InputStreamReader reader = new InputStreamReader(response.entity.content)
+                    CurseError error = Util.gson.fromJson(reader, CurseError)
+                    reader.close()
+                    throw new RuntimeException("[CurseForge ${projectId}] Error Code ${error.errorCode}: ${error.errorMessage}")
+                } else {
+                    throw new RuntimeException("[CurseForge ${projectId}] HTTP Error Code ${response.code}: ${response.reasonPhrase}")
+                }
             }
-        }
+            return null
+        })
 
         log.lifecycle "Uploaded {} to CurseForge Project: {}, with ID: {}", file, projectId, fileID
         return fileID
